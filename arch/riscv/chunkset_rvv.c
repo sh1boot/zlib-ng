@@ -29,6 +29,22 @@ do {                                                                    \
     } while (len > 0);                                                  \
 } while (0)
 
+static inline void* memcpy_rvv(void* dst, void const* src, size_t len) {
+    // TODO: m1, m2, m4, or m8 might provide the best balance of predictable
+    // branches against unnecessary operations.  Tune this.
+    do {
+        size_t vl =  __riscv_vsetvl_e8m2(len);
+        vuint8m2_t chunk = __riscv_vle8_v_u8m2(src, vl);
+        __riscv_vse8_v_u8m2(dst, chunk, vl);
+        dst = (uint8_t*)dst + vl;
+        src = (uint8_t*)src + vl;
+        len -= vl;
+    } while (len > 0);
+    return dst;
+}
+
+#define VARLEN_MEMCPY memcpy_rvv
+
 /* We don't have a 32-byte datatype for RISC-V arch. */
 typedef struct chunk_s {
     uint64_t data[4];
@@ -93,14 +109,14 @@ static inline uint8_t* CHUNKCOPY(uint8_t *out, uint8_t const *from, unsigned len
     len -= align;
     ptrdiff_t dist = out - from;
     if (dist >= len) {
-        memcpy(out, from, len);
+        memcpy_rvv(out, from, len);
         out += len;
         from += len;
         return out;
     }
     if (dist >= sizeof(chunk_t)) {
         dist = (dist / sizeof(chunk_t)) * sizeof(chunk_t);
-        memcpy(out, from, dist);
+        memcpy_rvv(out, from, dist);
         out += dist;
         from += dist;
         len -= dist;

@@ -39,6 +39,10 @@
 #  define INFLATE_GET_DICTIONARY_HOOK(strm, dict, dict_len) do {} while (0)
 #endif
 
+#if !defined VARLEN_MEMCPY
+#define VARLEN_MEMCPY memcpy
+#endif
+
 /*
  *   Macros shared by inflate() and inflateBack()
  */
@@ -157,7 +161,7 @@ static inline uint8_t* chunkcopy_safe(uint8_t *out, uint8_t *from, uint64_t len,
 
     /* For all cases without overlap, memcpy is ideal */
     if (!(olap_src || olap_dst)) {
-        memcpy(out, from, (size_t)len);
+        VARLEN_MEMCPY(out, from, (size_t)len);
         return out + len;
     }
 
@@ -173,7 +177,7 @@ static inline uint8_t* chunkcopy_safe(uint8_t *out, uint8_t *from, uint64_t len,
      * behind or lookahead distance. */
     uint64_t non_olap_size = llabs(from - out); // llabs vs labs for compatibility with windows
 
-    memcpy(out, from, (size_t)non_olap_size);
+    VARLEN_MEMCPY(out, from, (size_t)non_olap_size);
     out += non_olap_size;
     from += non_olap_size;
     len -= non_olap_size;

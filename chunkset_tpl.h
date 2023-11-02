@@ -9,6 +9,10 @@
 extern uint8_t* chunkmemset_ssse3(uint8_t *out, unsigned dist, unsigned len);
 #endif
 
+#if !defined VARLEN_MEMCPY
+#define VARLEN_MEMCPY memcpy
+#endif
+
 /* Returns the chunk size */
 Z_INTERNAL uint32_t CHUNKSIZE(void) {
     return sizeof(chunk_t);
@@ -79,7 +83,7 @@ static inline chunk_t GET_CHUNK_MAG(uint8_t *buf, uint32_t *chunk_rem, uint32_t 
         uint8_t *cur_chunk = (uint8_t *)&chunk_load;
         while (bytes_remaining) {
             cpy_dist = MIN(dist, bytes_remaining);
-            memcpy(cur_chunk, buf, cpy_dist);
+            VARLEN_MEMCPY(cur_chunk, buf, cpy_dist);
             bytes_remaining -= cpy_dist;
             cur_chunk += cpy_dist;
             /* This allows us to bypass an expensive integer division since we're effectively
@@ -161,7 +165,7 @@ Z_INTERNAL uint8_t* CHUNKMEMSET(uint8_t *out, unsigned dist, unsigned len) {
     }
 
     if (len) {
-        memcpy(out, &chunk_load, len);
+        VARLEN_MEMCPY(out, &chunk_load, len);
         out += len;
     }
 
